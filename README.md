@@ -17,7 +17,8 @@ Table of contents:
 - [Deployment guide](#deployment)
   - [Running in dev mode](#running-application-in-developer-mode) 
 - [Documentation](#documentation)
-  - [Code style conventions](#) 
+  - [Code style conventions](#code-style-conventions)
+  - [General documentation](#code-documentation)
 
 ## Sketch of the final version of the application
 
@@ -38,6 +39,7 @@ It is supposed to be designed in microservices paradigm, implementing such servi
 | Post | creation of posts, edition, main feed of the application |
 | Notification | getting/marking notifications as read, websocket connection for live notifications |
 | Media processing | CPU-intensive media operations + storage |
+|||
 | Analytics | user behaviour analytics (postponed indefinitely) |
 
 Technologies to be used (meaning which _may be attached_):
@@ -54,16 +56,16 @@ Technologies to be used (meaning which _may be attached_):
 
 
 ## Deployment
-### Running application in developer mode
+### Running single service in developer mode
 1. Install dependencies
 
-From root directory execute in your system's CLI
+From root directory of the service execute in your system's CLI
 ```bash
 pip install -r requirements.txt
 ```
 2. Run FastAPI
 
-From "src" directory run
+From "src" directory of the service run
 ```bash
 fastapi dev main.py
 ``` 
@@ -85,3 +87,12 @@ All plugins are listed in **_linting-req.txt_** requirements file
 Besides of obvious requirement for meeting PEP8 requirements, _import-order requirement_ is also introduced:
 
 - Chosen import order rule - cryptography for [flake8-import-order plugin](https://pypi.org/project/flake8-import-order/)
+
+### Code documentation
+Code is documented per service in order not to overload this manual. Each service has it's own
+README.md, where you can find its local design conventions and class/function docs.
+
+However, current section is still usable as it will document integration between services, as well as 
+some shared codebase. 
+
+For now, since no shared codebase nor integration between services is not implemented, it is left intentionally blank
