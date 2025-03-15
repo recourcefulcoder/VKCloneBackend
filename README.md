@@ -59,17 +59,34 @@ Technologies to be used (meaning which _may be attached_):
 ### Running single service in developer mode
 1. Install dependencies
 
-From root directory of the service execute in your system's CLI
+From root directory of the service execute in your system's CLI and switch to "/src" directory:
 ```bash
 pip install -r requirements.txt
+cd src
 ```
-2. Run FastAPI
+
+2. Create .env file
+
+Each service requires some environment variables for its valid work, which are described in its README.md file.
+Specify this variables in .env file in the root directory of the service in following syntax:
+
+    VARNAME1=value1
+    VARNAME2=value2
+
+3. Update PYTHONPATH with root directory of the project and root directory of the service
+
+To do that in Linux, run
+```bash
+export PYTHONPATH="path/to/root/dir:path/to/root/dir/services/<service_name>:$PYTHONPATH"
+```
+
+4. Run FastAPI
 
 From "src" directory of the service run
 ```bash
 fastapi dev main.py
 ``` 
-3. _Enjoy ^\_^_
+5. _Enjoy ^\_^_
 
 ## Documentation
 

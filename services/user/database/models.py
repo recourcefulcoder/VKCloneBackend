@@ -2,8 +2,8 @@ import datetime
 import re
 
 from sqlalchemy import DateTime
-from sqlalchemy.sql import func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, validates
+from sqlalchemy.sql import func
 
 
 class Base(DeclarativeBase):
