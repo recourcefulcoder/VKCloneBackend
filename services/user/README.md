@@ -3,8 +3,9 @@
 This document contains code documentation for the USER service 
 
 Table of contents:
-- Environment variables used
-- Documentation 
+- [Environment variables used](#environment-variables)
+- [Documentation](#documentation)
+  - [Endpoint handlers docs](#endpoints) 
 
 ## Environment variables
 
@@ -21,4 +22,14 @@ specified:
 
 ## Documentation
 
-Any code docs will appear here ^_^
+/src files and their contents 
+- pydmodels.py - contains Pydantic models, used for request validation in FastAPI request handlers
+- main.py - contains main application logic - defined FastAPI app instance, handlers declared, etc.
+
+### Endpoints
+
+#### /signup endpoint
+Data validation is processed both via Pydantic model and SQLAlchemy's model validation.
+**Pydantic** ensures data is passed, **SQLAlchemy's model validators** - that data is valid;
+
+For that user instance is created and wrapped in try-except, which handles ValueError raising.

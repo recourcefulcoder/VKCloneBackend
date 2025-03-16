@@ -79,14 +79,22 @@ To do that in Linux, run
 ```bash
 export PYTHONPATH="path/to/root/dir:path/to/root/dir/services/<service_name>:$PYTHONPATH"
 ```
+4. Create PostgreSQL database and migrate with alembic
 
-4. Run FastAPI
+Create a PostgreSQL service, provide valid credentials for it in .env file (as stated in service docs) 
+and migrate it using alembic. From the root directory of service, run:
+
+```bash
+alembic upgrade head
+```
+
+5. Run FastAPI
 
 From "src" directory of the service run
 ```bash
 fastapi dev main.py
 ``` 
-5. _Enjoy ^\_^_
+6. _Enjoy ^\_^_
 
 ## Documentation
 
