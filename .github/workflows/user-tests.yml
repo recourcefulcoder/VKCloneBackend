@@ -1,0 +1,51 @@
+name: user-tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - user_service
+
+jobs:
+  testing-user:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: user-service-test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: user-service-test
+      PYTHONPATH: ${{ github.workspace }}/services/user:${{ github.workspace }}:$PYTHONPATH
+    strategy:
+      matrix:
+        python-version: [ "3.12" ]
+    defaults:
+      run:
+        shell: bash
+        working-directory: services/user
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r test-req.txt
+
+      - name: Migrate Test Database
+        run: alembic upgrade test@head
+
+      - name: Run tests
+        run: pytest

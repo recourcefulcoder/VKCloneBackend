@@ -6,7 +6,7 @@ venv/
 """
 extend-exclude =  """
 /(
-    | migrations
+    | alembic
 )/
 """
 line-length = 79

@@ -15,7 +15,7 @@ for documentation see [Documentation](#documentation) section
 Table of contents:
 - [Final goal](#sketch-of-the-final-version-of-the-application)
 - [Deployment guide](#deployment)
-  - [Running in dev mode](#running-application-in-developer-mode) 
+  - [Running single service  in dev mode](#running-single-service-in-developer-mode) 
 - [Documentation](#documentation)
   - [Code style conventions](#code-style-conventions)
   - [General documentation](#code-documentation)
@@ -57,44 +57,7 @@ Technologies to be used (meaning which _may be attached_):
 
 ## Deployment
 ### Running single service in developer mode
-1. Install dependencies
-
-From root directory of the service execute in your system's CLI and switch to "/src" directory:
-```bash
-pip install -r requirements.txt
-cd src
-```
-
-2. Create .env file
-
-Each service requires some environment variables for its valid work, which are described in its README.md file.
-Specify this variables in .env file in the root directory of the service in following syntax:
-
-    VARNAME1=value1
-    VARNAME2=value2
-
-3. Update PYTHONPATH with root directory of the project and root directory of the service
-
-To do that in Linux, run
-```bash
-export PYTHONPATH="path/to/root/dir:path/to/root/dir/services/<service_name>:$PYTHONPATH"
-```
-4. Create PostgreSQL database and migrate with alembic
-
-Create a PostgreSQL service, provide valid credentials for it in .env file (as stated in service docs) 
-and migrate it using alembic. From the root directory of service, run:
-
-```bash
-alembic upgrade head
-```
-
-5. Run FastAPI
-
-From "src" directory of the service run
-```bash
-fastapi dev main.py
-``` 
-6. _Enjoy ^\_^_
+For instructions on how to run a single service in dev mode check service's README.md
 
 ## Documentation
 
@@ -106,6 +69,7 @@ It is crucial to state all development practices on the start - so here we are, 
 Main judge of compliance with code agreements will be [flake8](https://flake8.pycqa.org/en/latest/) linting tool with following plugins installed:
 - [flake8-print](https://pypi.org/project/flake8-print/)
 - [flake8-import-order](https://pypi.org/project/flake8-import-order/)
+- [pytest-flake8](https://pypi.org/project/pytest-flake8/)
 
 All plugins are listed in **_linting-req.txt_** requirements file
 

@@ -25,24 +25,17 @@ class User(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(**kwargs)
+        if "password" in kwargs.keys():
+            self.set_password(kwargs["password"])
+
     @validates("email")
     def validate_email(self, key, address):
         pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if not re.fullmatch(pattern, address):
             raise ValueError("Invalid email address!")
         return address
-
-    @validates("password")
-    def validate_password(self, key, password):
-        pattern = r"""^[A-Za-z0-9!@#$%^&*()_+=\-"'<>,./\\|{}\[\]:;`~]+$"""
-        if not re.fullmatch(pattern, password):
-            raise ValueError(
-                "Invalid password: only "
-                "ASCII characters, digits "
-                r"""and special symbols !@#$%^&*()_+=\-"'<>,./\|{}[]:;`~"""
-                " allowed."
-            )
-        return password
 
     @staticmethod
     def hash_password(password: str) -> str:
