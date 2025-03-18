@@ -1,5 +1,11 @@
+import subprocess
+
+import config
+
 from database.engine import engine
 from database.models import User
+
+import pytest
 
 import pytest_asyncio
 
@@ -22,3 +28,13 @@ async def _delete_odd_users(session):
         delete(User).where(User.id.not_in(testvars.USER_IDS))
     )
     await session.commit()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def run_redis_if_needed():
+    proc = None
+    if config.DEBUG:
+        proc = subprocess.Popen("redis-server --port 6379", shell=True)
+    yield
+    if config.DEBUG:
+        proc.kill()

@@ -1,5 +1,5 @@
 # Stage 1 - package installation
-FROM python:3.11-alpine as builder
+FROM python:3.12-alpine as builder
 
 RUN mkdir /app
 

@@ -10,6 +10,8 @@ from sqlalchemy import select
 
 from src.main import app
 
+REGISTER_LINK = "/user/auth/signup"
+
 
 @pytest.mark.asyncio
 async def test_signup_valid_data(session):
@@ -22,7 +24,7 @@ async def test_signup_valid_data(session):
     async with AsyncClient(
         transport=ASGITransport(app), base_url="http://test"
     ) as client:
-        response = await client.post("/user/signup", json=user_data)
+        response = await client.post(REGISTER_LINK, json=user_data)
     query_res = await session.execute(
         select(User).where(User.username == valid_username)
     )
@@ -54,7 +56,7 @@ async def test_signup_incomplete_data(data):
     async with AsyncClient(
         transport=ASGITransport(app), base_url="http://test"
     ) as client:
-        response = await client.post("/user/signup", json=data)
+        response = await client.post(REGISTER_LINK, json=data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -78,7 +80,7 @@ async def test_signup_invalid_email(email):
     async with AsyncClient(
         transport=ASGITransport(app), base_url="http://test"
     ) as client:
-        response = await client.post("/user/signup", json=data)
+        response = await client.post(REGISTER_LINK, json=data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -102,5 +104,5 @@ async def test_signup_invalid_password(password):
     async with AsyncClient(
         transport=ASGITransport(app), base_url="http://test"
     ) as client:
-        response = await client.post("/user/signup", json=data)
+        response = await client.post(REGISTER_LINK, json=data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

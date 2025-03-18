@@ -84,4 +84,11 @@ README.md, where you can find its local design conventions and class/function do
 However, current section is still usable as it will document integration between services, as well as 
 some shared codebase. 
 
-For now, since no shared codebase nor integration between services is not implemented, it is left intentionally blank
+#### Environment variables
+Interservice environment variables should be stored in services/.env file
+
+List of shared environment variables contains:
+
+| Variable | Value stored |
+| -------- | ------------ |
+| JWT_SECRET_KEY | stores secret key for JWT-authorization mechanism |

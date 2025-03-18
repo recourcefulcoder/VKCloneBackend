@@ -6,12 +6,15 @@ This document contains code documentation for the USER service
 
 Table of contents:
 - [Running in dev mode](#running-service-in-developer-mode)
+- [Debug application mode](#debug-mode)
 - [Notes on testing](#testing) (**MUST-READ** before launching!)
 - [Documentation](#documentation)
   - [Environment variables used](#environment-variables)
   - [Project general structure](#project-structure) 
+    - [Project configuration in config.py](#configpy-file) 
   - [Database models](#database-models-user-model) 
   - [Endpoint handlers docs](#endpoints) 
+  - [TokenManager class](#tokenmanager-class-in-authpy)
 
 ## Running service in developer mode
 
@@ -47,14 +50,31 @@ and migrate it using alembic. From the root directory of service, run:
 alembic upgrade main@head
 ```
 
-5. Run FastAPI
+5. Set up a Redis server (or specify running mode as DEBUG by setting 
+[USER_DEBUG=True](#environment-variables) in your .env file)
+
+6. Run FastAPI
 
 From "src" directory of the service run
 ```bash
 fastapi dev main.py
 ``` 
 
-6. _Enjoy ^\_^_
+7. _Enjoy ^\_^_
+
+## Debug mode
+Debug mode is a special runmode where service is run on its own, without any other services attached to it.
+Applciation runs in DEBUG when USER_DEBUG environment variable is set to one of these values: 
+- True
+- yes
+- y
+- 1
+
+What are main differences to prod/dev mode?
+- It spams Redis service on its own via [subprocess](https://docs.python.org/3/library/subprocess.html) 
+python module 
+
+And that's it for now. Yet It is not ruled out this section will expand with time.
 
 ## Testing
 Since tests may perform CRUD operations on a database, they need an isolated database for runtime.
@@ -84,27 +104,29 @@ These two are used for testing auth endpoints.
 Preferred, yet not supported currently variant
 
 ### Manual running instructions
-1. Create a test PostgreSQL database
-2. Provide credentials for connecting to TEST database in .env file
+1. Create and set up a test PostgreSQL database
+2. Create and set up Redis DB (or set [USER_DEBUG env variable](#environment-variables) to 
+True to ask pytest to spam Redis process himself)
+3. Provide credentials for connecting to TEST database in .env file
 
 > [!CAUTION]
 > Not paying enough attention on this step WILL violate data in your DEV/PROD database, so 
 > make sure to provide credentials for TEST database!!
 
-3. Run database migrations via alembic
+4. Run database migrations via alembic
 
 For that, run from the root directory of the service:
 ```bash
 alembic upgrade test@head
 ```
-4. Install test dependencies
+5. Install test dependencies
 
 They are listed in test-req.txt file; you can install them with
 ```bash
 pip install -r test-req.txt 
 ```
 
-5. Run tests with pytest
+6. Run tests with pytest
 
 From the root directory of the project execute
 ```bash
@@ -124,15 +146,42 @@ specified:
 | POSTGRES_USER | name of PostgreSQL database user to be used for connections|
 | POSTGRES_PASSWORD | password for POSTGRES_USER |
 | POSTGRES_DB | name of PostgreSQL DB for the service |
+|||
+| USER_DEBUG | defines whether application is running in debug mode or not; _False_ by default |
 
 ### Project structure
 
 /src files and their contents
-- pydmodels.py - contains Pydantic models, used for request validation in FastAPI request handlers
-- main.py - contains main application logic - defined FastAPI app instance and "user" router registration
-- dependencies.py - contains app dependencies to be included
+- **main.py** - contains main application logic - defined FastAPI app instance and "user" router registration
+- **auth.py** - contains class TokenManager, which handles authorization logic - token creation/verification, etc.
+- **dependencies.py** - contains app dependencies to be included
+- **pydmodels.py** - contains Pydantic models, used for request validation in FastAPI request handlers
 
 Main logic of the application (meaning endpoint handlers) is defined in routers/users.py
+
+#### config.py file
+
+This file is stored in the root directory of the project and contains all essential setting 
+variables of the project (consider it to be a copy of [setting.py](https://docs.djangoproject.com/en/5.1/topics/settings/) 
+module in Django)
+
+It is stored in the root directory of the project.
+
+Variables of config.py:
+
+| Variable | Value and function |
+| -------- | ------------------ |
+| DB_HOST | represents DB_HSOT env variable |
+| POSTGRES_USER | represents POSTGRES_USER env variable |
+| POSTGRES_PASSWORD | represents POSTGRES_PASSWORD env variable |
+| POSTGRES_DB | represents POSTGRES_DB env variable |
+| JWT_SECRET_KEY| represents JWT_SECRET_KEY env variable |
+| DEBUG | represents USER_DEBUG env variable |
+|||
+| JWT_ALGORITHM | stores algorithm for JWT-token payload encoding/decoding |
+| ACCESS_EXP_TIME | datetime.timedelta object, representing **access token** lifetime |
+| REFRESH_EXP_TIME | datetime.timedelta object, representing **refresh token** lifetime |
+
 
 ### Database models (User model)
 
@@ -146,5 +195,55 @@ user creation/update must be done outside from SQLAlchemy ORM model (via Pydanti
 
 ### Endpoints
 
-#### /signup endpoint
+Currently two (2) routers are implemented for an application:
+- Basic one: adding "/user" prefix to all the endpoints
+- Authorization: adding "/auth" prefix, handles signup/signin
+
+#### auth/signup endpoint
 Data validation is given to Pydantic model, yet SQLAlchemy's User model still contains email validation (just in case)
+Processes request, containing necessarily fields "username", "email", "password" which should pass the validation
+
+- password: only ASCII letters, digits and specials symbols from the list: !@#$%^&*()_+?=\-"'<>,./\|{}[]:;`~
+- email: valid email (containts @, must have domain, subdomain contains at least two character, 
+allowed only ASCII letters, digits and some special symbols, such are ._%+- )
+
+#### auth/login endpoint
+
+Processes sent json object with credentials, returns [JWT-tokens](https://jwt.io/introduction) 
+on valid credentials.
+
+Payload requirements:
+- should contain "password" keyword
+- should contain whether "username" or "email" keyword (but not both!)
+
+Return json object contains following keys:
+- access_token - access JWT-token
+- refresh_token - refresh JWT-token
+
+### TokenManager class (in auth.py)
+This class handles authorization logic - token verification/creation via communication with redis server. 
+
+Created in a singleton pattern, in order not to overcome Redis' TCP-connection limit 
+(since each new object would open new TCP connection), and each new instance would use 
+separate connection pool, which practically disables any performance upscales related to pooling connections
+
+----------
+Class attributes:
+- **redis** - defines redis client; redis client is asynchronous
+-----------
+Class methods:
+- generate_access_token(email: str) - generates JWT access token, based on email provided. 
+ 
+STATIC METHOD
+
+**sub value** of JWT payload is chosen to be a user's email
+
+**expiry time** is decided based on value of ACCESS_EXPIRY_TIME value in [config.py](#configpy-file)
+- decode_access_token(token: str) - decodes JWT-token value passed; 
+
+STATIC METHOD
+
+_**Return value**_: if invalid (invalid format/expired/unable to decode) returns None; if valid, 
+returns content of "sub" key of the payload (i.e. user's email); 
+> [!WARNING]
+> It doesn't check email on validity/presence in database - it only decodes given token string, and that's it 

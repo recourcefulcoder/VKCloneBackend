@@ -17,7 +17,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(unique=True)
     email: Mapped[str] = mapped_column(unique=True)
-    password: Mapped[str]
+    _password: Mapped[str] = mapped_column("password")
     created_date: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -28,7 +28,7 @@ class User(Base):
     def __init__(self, *args, **kwargs):
         super().__init__(**kwargs)
         if "password" in kwargs.keys():
-            self.set_password(kwargs["password"])
+            self.password = kwargs["password"]
 
     @validates("email")
     def validate_email(self, key, address):
@@ -44,6 +44,14 @@ class User(Base):
         )
         return pwhash.decode(encoding="utf-8")
 
-    def set_password(self, password: str) -> str:
-        self.password = self.hash_password(password)
-        return str(self.password)
+    @property
+    def password(self):
+        return self._password
+
+    @password.setter
+    def password(self, password: str):
+        self._password = self.hash_password(password)
+
+    def verify_password(self, password: str):
+        encoded = password.encode("utf-8")
+        return bcrypt.checkpw(encoded, self.password.encode("utf-8"))

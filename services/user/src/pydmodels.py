@@ -1,6 +1,7 @@
 import re
+from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class SignUpModel(BaseModel):
@@ -28,3 +29,20 @@ class SignUpModel(BaseModel):
                 "AND <space symbol> allowed."
             )
         return password
+
+
+class LoginModel(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    password: str
+
+    @model_validator(mode="after")
+    def check_sub(self):
+        both_missed = not (self.email is not None or self.username is not None)
+        both_provided = self.email is not None and self.username is not None
+        if both_missed or both_provided:
+            raise ValueError(
+                "Whether email or username must be provided: "
+                "both/not one is invalid"
+            )
+        return self
