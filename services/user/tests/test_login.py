@@ -8,12 +8,13 @@ import pytest
 
 from sqlalchemy.sql import select
 
+from src.auth import TokenManager
 from src.main import app
 
 import testvars
 
 
-LOGIN_LINK = "user/auth/login"
+LOGIN_LINK = app.url_path_for("login")
 
 
 @pytest.mark.parametrize(
@@ -24,19 +25,19 @@ LOGIN_LINK = "user/auth/login"
             "password": testvars.USER1_PASSWORD,
         },
         {
-            "email": testvars.USER1_EMAIL,
-            "password": testvars.USER1_PASSWORD,
+            "username": testvars.USER2_USERNAME,
+            "password": testvars.USER2_PASSWORD,
         },
     ],
 )
 @pytest.mark.asyncio
 async def test_valid_credentials(payload):
     async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
+        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
     ) as client:
         response = await client.post(
             LOGIN_LINK,
-            json=payload,
+            data=payload,
         )
     response_content = response.json().keys()
     assert response.status_code == status.HTTP_200_OK
@@ -62,28 +63,11 @@ async def test_valid_credentials(payload):
 @pytest.mark.asyncio
 async def test_incomplete_credentials(payload):
     async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
+        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
     ) as client:
         response = await client.post(
             LOGIN_LINK,
-            json=payload,
-        )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-
-@pytest.mark.asyncio
-async def test_payload_conflict():
-    payload = {
-        "email": testvars.USER1_EMAIL,
-        "username": testvars.USER1_USERNAME,
-        "password": "validPassword",
-    }
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
-    ) as client:
-        response = await client.post(
-            LOGIN_LINK,
-            json=payload,
+            data=payload,
         )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -96,19 +80,19 @@ async def test_payload_conflict():
             "password": testvars.USER1_PASSWORD + "invalid_add",
         },
         {
-            "email": testvars.USER1_EMAIL,
-            "password": testvars.USER1_PASSWORD + "invalid_add",
+            "username": testvars.USER1_USERNAME + "invalid_add",
+            "password": testvars.USER1_PASSWORD,
         },
     ],
 )
 @pytest.mark.asyncio
 async def test_invalid_credentials(payload):
     async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
+        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
     ) as client:
         response = await client.post(
             LOGIN_LINK,
-            json=payload,
+            data=payload,
         )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -120,11 +104,11 @@ async def test_non_existing_user():
         "password": "valid",
     }
     async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
+        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
     ) as client:
         response = await client.post(
             LOGIN_LINK,
-            json=payload,
+            data=payload,
         )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -136,13 +120,34 @@ async def test_malicious_input_defence(session):
         "password": "valid_password",
     }
     async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
+        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
     ) as client:
         response = await client.post(
             LOGIN_LINK,
-            json=payload,
+            data=payload,
         )
     users = await session.execute(select(User))
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert users.first() is not None
+
+
+@pytest.mark.asyncio
+async def test_refresh_updated():
+    valid_payload = {
+        "username": testvars.USER1_USERNAME,
+        "password": testvars.USER1_PASSWORD,
+    }
+    async with AsyncClient(
+            transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
+    ) as client:
+        response = await client.post(
+            LOGIN_LINK,
+            data=valid_payload,
+        )
+        prev_token = response.json()["refresh_token"]
+        await client.post(
+            LOGIN_LINK,
+            data=valid_payload,
+        )
+    assert await TokenManager().get_refresh(1) != prev_token

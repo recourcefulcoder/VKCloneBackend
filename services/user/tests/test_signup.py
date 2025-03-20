@@ -6,11 +6,24 @@ from httpx import ASGITransport, AsyncClient
 
 import pytest
 
-from sqlalchemy import select
+import pytest_asyncio
+
+from sqlalchemy.sql import delete, select
 
 from src.main import app
 
+import testvars
+
 REGISTER_LINK = "/user/auth/signup"
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _delete_odd_users(session):
+    yield
+    await session.execute(
+        delete(User).where(User.id.not_in(testvars.USER_IDS))
+    )
+    await session.commit()
 
 
 @pytest.mark.asyncio
@@ -22,7 +35,7 @@ async def test_signup_valid_data(session):
         "password": "Jungle",
     }
     async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
+        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
     ) as client:
         response = await client.post(REGISTER_LINK, json=user_data)
     query_res = await session.execute(
@@ -54,7 +67,7 @@ async def test_signup_valid_data(session):
 @pytest.mark.asyncio
 async def test_signup_incomplete_data(data):
     async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
+        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
     ) as client:
         response = await client.post(REGISTER_LINK, json=data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -78,7 +91,7 @@ async def test_signup_invalid_email(email):
         "email": email,
     }
     async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
+        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
     ) as client:
         response = await client.post(REGISTER_LINK, json=data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -102,7 +115,7 @@ async def test_signup_invalid_password(password):
         "email": "valid_email@gmail.com",
     }
     async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
+        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
     ) as client:
         response = await client.post(REGISTER_LINK, json=data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

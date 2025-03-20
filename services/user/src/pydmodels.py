@@ -1,3 +1,4 @@
+import datetime
 import re
 from typing import Optional
 
@@ -46,3 +47,14 @@ class LoginModel(BaseModel):
                 "both/not one is invalid"
             )
         return self
+
+
+class RefreshToken(BaseModel):
+    refresh_token: str
+
+
+class UserInfo(BaseModel):
+    id: int
+    username: str
+    email: str
+    created_date: datetime.datetime

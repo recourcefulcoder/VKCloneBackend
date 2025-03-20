@@ -1,24 +1,21 @@
-import secrets
-
-import config
-
 from database.models import User
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, HTTPException, Response, status
 
 import sqlalchemy.exc
 from sqlalchemy.sql import select
 
 import src.dependencies as dp
-from src.auth import generate_access_token
-from src.pydmodels import LoginModel, SignUpModel
+import src.pydmodels as pdm
+from src.auth import decode_jwt_token, generate_token_pair
+
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/signup")
 async def signup(
-    item: SignUpModel, session: dp.SessionDep, response: Response
+    item: pdm.SignUpModel, session: dp.SessionDep, response: Response
 ):
     user = User(**item.model_dump())
     session.add(user)
@@ -32,33 +29,45 @@ async def signup(
 
 @router.post("/login")
 async def login(
-    item: LoginModel,
+    form_data: dp.LoginFormData,
     session: dp.SessionDep,
     token_manager: dp.TokenManagerDep,
     response: Response,
 ):
 
-    if item.username is not None:
-        query_resp = await session.execute(
-            select(User).where(User.username == item.username)
-        )
-    else:
-        query_resp = await session.execute(
-            select(User).where(User.email == item.email)
-        )
+    query_resp = await session.execute(
+        select(User).where(User.username == form_data.username)
+    )
     user = query_resp.scalar()
 
-    if user is None or not user.verify_password(item.password):
+    if user is None or not user.verify_password(form_data.password):
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return {"error": "invalid credentials"}
 
-    tokens = {
-        "refresh_token": secrets.token_urlsafe(32),
-        "access_token": generate_access_token(user.email),
-    }
+    tokens = generate_token_pair(user.id)
 
-    await token_manager.setex(
-        tokens["refresh_token"], config.REFRESH_EXP_TIME, user.email
+    await token_manager.set_refresh(user.id, tokens["refresh_token"])
+
+    return tokens
+
+
+@router.post("/refresh")
+async def refresh(token: pdm.RefreshToken, token_manager: dp.TokenManagerDep):
+    token_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token invalid",
+        headers={"WWW-Authenticate": "Bearer"},
     )
+    refresh_token = token.refresh_token
+    user_id = decode_jwt_token(refresh_token)
 
+    if user_id is None:
+        raise token_exception
+    stored_refresh = await token_manager.get_refresh(user_id)
+
+    if stored_refresh is None or stored_refresh != refresh_token:
+        raise token_exception
+
+    tokens = generate_token_pair(user_id)
+    await token_manager.set_refresh(user_id, tokens["refresh_token"])
     return tokens

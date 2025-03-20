@@ -239,20 +239,36 @@ allowed only ASCII letters, digits and some special symbols, such are ._%+- )
 
 #### auth/login endpoint
 
-Processes sent json object with credentials, returns [JWT-tokens](https://jwt.io/introduction) 
+Processes sent form data with credentials, returns [JWT-tokens](https://jwt.io/introduction) 
 on valid credentials.
 
-Payload requirements:
+User authorization protocol used is OAuth2 with password flow; 
+
+OAuth2 specifies that when using the "password flow" (that is used here) the client/user 
+must send a username and password fields as form data - so required fields on this endpoint are
+packed in form data "password" and "username".
+
+Form data requirements:
 - should contain "password" keyword
-- should contain whether "username" or "email" keyword (but not both!)
+- should contain "username" keyword 
 
 Return json object contains following keys:
 - access_token - access JWT-token
 - refresh_token - refresh JWT-token
 
+#### auth/refresh endpoint
+Processes JWT-token refreshment; accepts refresh_token in request data, returns a new pair of 
+refresh and access tokens (+ deletes old/adds new refresh token to Redis)
+
+Payload requirements:
+- must contain key "refresh_token" 
+
 ### Authorization utils (auth.py)
 #### TokenManager class 
-This class handles authorization logic - token verification/creation via communication with redis server. 
+This class is basically a wrapper of redis-py asynchronous Redis class
+(see examples of usage [here](https://redis-py.readthedocs.io/en/latest/connections.html)),
+created in order to ensure singleton implementation (meaning to ensure that redis dependency always accesses same
+instance of Redis client) and implement API for writing/reading/deleting _refresh tokens_ from the Redis DB
 
 Created in a singleton pattern, in order not to overcome Redis' TCP-connection limit 
 (since each new object would open new TCP connection), and each new instance would use 
@@ -260,17 +276,27 @@ separate connection pool, which practically disables any performance upscales re
 
 ----------
 Class attributes:
-- **redis** - defines asynchronous redis client; 
+- **_redis** - defines asynchronous redis client; 
 -----------
 Class methods:
+
+There are two groups of this class' methods:
+1. These are mirroring [redis-py commands](https://redis-py.readthedocs.io/en/latest/commands.html).
+in order to provide API without accessing **_redis** instance directly
 - async def setex - mirroring Redis instance's method setex
 - async def get - mirroring Redis instance's method get
+- async def deletes - mirroring Redis instance's method get
+2. Refresh token-specific
+- async def get_refresh(user_id: int) - returns refresh token for user with ID user_id; 
+returns None if not found or str (value of refresh) if found
+- async def delete_refresh(user_id: int) - deletes refresh token for user with ID user_id
+- async def set_refresh(self, user_id: int, refresh: str) - sets a refresh for user on key "refresh_token:<user_id>"
 
 
 #### Token-related functions
 - generate_access_token(email: str) - generates JWT access token, based on email provided.
 
-**sub value** of JWT payload is chosen to be a user's email
+**sub value** of JWT payload is chosen to be a user's id
 
 **expiry time** is decided based on value of ACCESS_EXPIRY_TIME value in [config.py](#configpy-file)
 - decode_access_token(token: str) - decodes JWT-token value passed;
