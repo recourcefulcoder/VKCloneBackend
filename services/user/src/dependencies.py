@@ -21,4 +21,4 @@ def get_token_manager():
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
-TokenDep = Annotated[TokenManager, Depends(get_token_manager)]
+TokenManagerDep = Annotated[TokenManager, Depends(get_token_manager)]

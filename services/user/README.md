@@ -8,13 +8,14 @@ Table of contents:
 - [Running in dev mode](#running-service-in-developer-mode)
 - [Debug application mode](#debug-mode)
 - [Notes on testing](#testing) (**MUST-READ** before launching!)
+- [Dockerization]()
 - [Documentation](#documentation)
   - [Environment variables used](#environment-variables)
   - [Project general structure](#project-structure) 
     - [Project configuration in config.py](#configpy-file) 
   - [Database models](#database-models-user-model) 
   - [Endpoint handlers docs](#endpoints) 
-  - [TokenManager class](#tokenmanager-class-in-authpy)
+  - [Authorization utils](#authorization-utils-authpy)
 
 ## Running service in developer mode
 
@@ -35,11 +36,11 @@ Specify this variables in .env file in the root directory of the service in foll
     VARNAME1=value1
     VARNAME2=value2
 
-3. Update PYTHONPATH with root directory of the project and root directory of the service
+3. Update PYTHONPATH with root directory of the service
 
 To do that in Linux, run
 ```bash
-export PYTHONPATH="path/to/root/dir:path/to/root/dir/services/<service_name>:$PYTHONPATH"
+export PYTHONPATH="path/to/root/dir/services/<service_name>:$PYTHONPATH"
 ```
 4. Create PostgreSQL database and migrate with alembic
 
@@ -101,7 +102,20 @@ Test migration creates two test users:
 These two are used for testing auth endpoints.
 
 ### Running with Docker instructions
-Preferred, yet not supported currently variant
+Preferred since is safer and easier to run
+
+In order to run tests, execute from the root directory of the service:
+```bash
+docker compose up --build -d
+docker exec user-service pytest
+```
+(replacing **_user-service_** with actual name of service container running; 
+yet it truly is the name of the container by default )
+
+In order to delete container after test execution, run following command:
+```bash
+docker compose down -v
+```
 
 ### Manual running instructions
 1. Create and set up a test PostgreSQL database
@@ -133,6 +147,19 @@ From the root directory of the project execute
 pytest tests
 ```
 
+## Dockerization
+Even though project has Dockerfile, it is not yet considered to be valid Docker, as it is aimed for tests:
+- creates test data in the database
+- contains **_DANGEROUS_** test package (which violates database data on runtime, see [testing](#testing))
+
+As another testing mechanism will be implemented, it will be possible to use same Dockerfile for 
+blueprinting prod-like Docker image; for now it requires following adjustments:
+- add /tests to .dockerignore
+- edit entrypoint.sh: rewrite line which runs database migrations to 
+```bash
+alembic upgrad main@head
+```
+
 ## Documentation
 
 ### Environment variables
@@ -142,7 +169,9 @@ specified:
 
 | variable name | carried value |
 | ------------- | ------------- |
-| DB_HOST | name of host handling database requests; defaults to _localhost_|
+| DB_HOST | name of host associated with PostgreSQL DB; defaults to _localhost_|
+| REDIS_HOST | name of host associated with Redis DB; defaults to _localhost_|
+|||
 | POSTGRES_USER | name of PostgreSQL database user to be used for connections|
 | POSTGRES_PASSWORD | password for POSTGRES_USER |
 | POSTGRES_DB | name of PostgreSQL DB for the service |
@@ -153,7 +182,8 @@ specified:
 
 /src files and their contents
 - **main.py** - contains main application logic - defined FastAPI app instance and "user" router registration
-- **auth.py** - contains class TokenManager, which handles authorization logic - token creation/verification, etc.
+- **auth.py** - contains authorization-related logic, meaning TokenManager class 
+(handling redis operations) and token-manipulation functions (creation/verification)
 - **dependencies.py** - contains app dependencies to be included
 - **pydmodels.py** - contains Pydantic models, used for request validation in FastAPI request handlers
 
@@ -220,7 +250,8 @@ Return json object contains following keys:
 - access_token - access JWT-token
 - refresh_token - refresh JWT-token
 
-### TokenManager class (in auth.py)
+### Authorization utils (auth.py)
+#### TokenManager class 
 This class handles authorization logic - token verification/creation via communication with redis server. 
 
 Created in a singleton pattern, in order not to overcome Redis' TCP-connection limit 
@@ -229,19 +260,20 @@ separate connection pool, which practically disables any performance upscales re
 
 ----------
 Class attributes:
-- **redis** - defines redis client; redis client is asynchronous
+- **redis** - defines asynchronous redis client; 
 -----------
 Class methods:
-- generate_access_token(email: str) - generates JWT access token, based on email provided. 
- 
-STATIC METHOD
+- async def setex - mirroring Redis instance's method setex
+- async def get - mirroring Redis instance's method get
+
+
+#### Token-related functions
+- generate_access_token(email: str) - generates JWT access token, based on email provided.
 
 **sub value** of JWT payload is chosen to be a user's email
 
 **expiry time** is decided based on value of ACCESS_EXPIRY_TIME value in [config.py](#configpy-file)
-- decode_access_token(token: str) - decodes JWT-token value passed; 
-
-STATIC METHOD
+- decode_access_token(token: str) - decodes JWT-token value passed;
 
 _**Return value**_: if invalid (invalid format/expired/unable to decode) returns None; if valid, 
 returns content of "sub" key of the payload (i.e. user's email); 

@@ -1,7 +1,7 @@
 import datetime
 import os
 
-from shared.utils import load_environ
+from src.utils import load_environ
 
 
 def load_local_and_global_environ():
@@ -13,6 +13,8 @@ load_local_and_global_environ()
 
 
 DB_HOST = os.getenv("DB_HOST", default="localhost")
+REDIS_HOST = os.getenv("REDIS_HOST", default="localhost")
+
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = os.getenv("POSTGRES_DB")

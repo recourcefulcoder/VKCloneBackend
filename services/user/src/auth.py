@@ -16,33 +16,39 @@ class TokenManager:
             cls._instance = super().__new__(cls, *args, **kwargs)
         return cls._instance
 
-    def __init__(self, host: str = "localhost"):
+    def __init__(self, host: str = config.REDIS_HOST):
         self.redis = redis.Redis(host=host, port=6379)
 
-    @staticmethod
-    def generate_access_token(email: str) -> Dict[str, Any]:
-        expire = datetime.now(timezone.utc) + config.ACCESS_EXP_TIME
-        to_encode = {
-            "exp": int(expire.timestamp()),
-            "alg": config.JWT_ALGORITHM,
-            "sub": email,
-        }
-        encoded_jwt = jwt.encode(
-            to_encode, config.JWT_SECRET_KEY, algorithm=config.JWT_ALGORITHM
-        )
-        return encoded_jwt
+    async def setex(self, *args, **kwargs):
+        return await self.redis.setex(*args, **kwargs)
 
-    @staticmethod
-    def decode_access_token(token: str) -> Optional[str]:
-        try:
-            payload = jwt.decode(
-                token, config.JWT_SECRET_KEY, algorithms=[config.JWT_ALGORITHM]
-            )
-        except (
-            jwt.exceptions.DecodeError,
-            jwt.exceptions.ExpiredSignatureError,
-            jwt.exceptions.InvalidSignatureError,
-            jwt.exceptions.InvalidKeyError,
-        ):
-            return None
-        return payload["sub"]
+    async def get(self, *args, **kwargs):
+        return await self.redis.get(*args, **kwargs)
+
+
+def generate_access_token(email: str) -> Dict[str, Any]:
+    expire = datetime.now(timezone.utc) + config.ACCESS_EXP_TIME
+    to_encode = {
+        "exp": int(expire.timestamp()),
+        "alg": config.JWT_ALGORITHM,
+        "sub": email,
+    }
+    encoded_jwt = jwt.encode(
+        to_encode, config.JWT_SECRET_KEY, algorithm=config.JWT_ALGORITHM
+    )
+    return encoded_jwt
+
+
+def decode_access_token(token: str) -> Optional[str]:
+    try:
+        payload = jwt.decode(
+            token, config.JWT_SECRET_KEY, algorithms=[config.JWT_ALGORITHM]
+        )
+    except (
+        jwt.exceptions.DecodeError,
+        jwt.exceptions.ExpiredSignatureError,
+        jwt.exceptions.InvalidSignatureError,
+        jwt.exceptions.InvalidKeyError,
+    ):
+        return None
+    return payload["sub"]

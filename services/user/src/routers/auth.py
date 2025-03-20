@@ -10,6 +10,7 @@ import sqlalchemy.exc
 from sqlalchemy.sql import select
 
 import src.dependencies as dp
+from src.auth import generate_access_token
 from src.pydmodels import LoginModel, SignUpModel
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -33,7 +34,7 @@ async def signup(
 async def login(
     item: LoginModel,
     session: dp.SessionDep,
-    token_manager: dp.TokenDep,
+    token_manager: dp.TokenManagerDep,
     response: Response,
 ):
 
@@ -53,10 +54,10 @@ async def login(
 
     tokens = {
         "refresh_token": secrets.token_urlsafe(32),
-        "access_token": token_manager.generate_access_token(user.email),
+        "access_token": generate_access_token(user.email),
     }
 
-    await token_manager.redis.setex(
+    await token_manager.setex(
         tokens["refresh_token"], config.REFRESH_EXP_TIME, user.email
     )
 
