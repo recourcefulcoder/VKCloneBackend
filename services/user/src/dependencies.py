@@ -42,6 +42,12 @@ async def fetch_user(
         )
     res = await session.execute(select(User).where(User.id == user_id))
     user = res.scalar()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     pydantic_user = UserInfo(
         id=user_id,
         email=user.email,
