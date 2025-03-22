@@ -5,19 +5,24 @@ import config
 
 import jwt
 
-import redis.asyncio as redis
+import redis.asyncio as aioredis
 
 
-class TokenManager:
-    _instance = None
+class RedisManger:
+    __instance = None
 
     def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls, *args, **kwargs)
-        return cls._instance
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls, *args, **kwargs)
+            cls.__instance.__initialized = False
+
+        return cls.__instance
 
     def __init__(self, host: str = config.REDIS_HOST):
-        self._redis = redis.Redis(host=host, port=6379)
+        if self.__initialized:
+            return
+        self._redis = aioredis.Redis(host=host, port=6379)
+        self.__initialized = True
 
     async def setex(self, *args, **kwargs):
         return await self._redis.setex(*args, **kwargs)
@@ -27,6 +32,9 @@ class TokenManager:
 
     async def delete(self, *args, **kwargs):
         return await self._redis.delete(*args)
+
+
+class TokenManager(RedisManger):
 
     async def get_refresh(self, user_id: int) -> Optional[str]:
         refresh_token = await self.get(f"refresh_token:{user_id}")
@@ -75,7 +83,7 @@ def decode_jwt_token(token: str) -> Optional[int]:
         )
     except jwt.exceptions.InvalidTokenError:
         return None
-    return payload["sub"]
+    return int(payload["sub"])
 
 
 def generate_token_pair(user_id: int) -> Dict[str, str]:
@@ -88,7 +96,3 @@ def generate_token_pair(user_id: int) -> Dict[str, str]:
         "access_token": generate_access_token(user_id),
         "refresh_token": generate_refresh_token(user_id),
     }
-
-
-# if __name__ == "__main__":
-#     print(decode_jwt_token("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDM2OTUxNTQsImFsZyI6IkhTMjU2Iiwic3ViIjoiMSJ9.abPf4_crBFkcOI9Wkls_c942qCbQisgUgCSx_EndQe8"))

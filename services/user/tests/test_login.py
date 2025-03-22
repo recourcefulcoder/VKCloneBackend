@@ -1,8 +1,8 @@
+import asyncio
+
 from database.models import User
 
 from fastapi import status
-
-from httpx import ASGITransport, AsyncClient
 
 import pytest
 
@@ -13,6 +13,7 @@ from src.main import app
 
 import testvars
 
+from . import pytestmark
 
 LOGIN_LINK = app.url_path_for("login")
 
@@ -30,19 +31,37 @@ LOGIN_LINK = app.url_path_for("login")
         },
     ],
 )
-@pytest.mark.asyncio
-async def test_valid_credentials(payload):
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(
-            LOGIN_LINK,
-            data=payload,
-        )
+async def test_valid_credentials(payload, client):
+    response = await client.post(
+        LOGIN_LINK,
+        data=payload,
+    )
     response_content = response.json().keys()
     assert response.status_code == status.HTTP_200_OK
     assert "refresh_token" in response_content
     assert "access_token" in response_content
+
+
+async def test_refresh_updated(client):
+    valid_payload = {
+        "username": testvars.USER1_USERNAME,
+        "password": testvars.USER1_PASSWORD,
+    }
+
+    response = await client.post(
+        LOGIN_LINK,
+        data=valid_payload,
+    )
+    prev_token = response.json()["refresh_token"]
+    await asyncio.sleep(1)
+    # in order to set different exp time, otherwise
+    # token pair will be same
+
+    await client.post(
+        LOGIN_LINK,
+        data=valid_payload,
+    )
+    assert await TokenManager().get_refresh(1) != prev_token
 
 
 @pytest.mark.parametrize(
@@ -60,15 +79,11 @@ async def test_valid_credentials(payload):
         {},
     ],
 )
-@pytest.mark.asyncio
-async def test_incomplete_credentials(payload):
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(
-            LOGIN_LINK,
-            data=payload,
-        )
+async def test_incomplete_credentials(payload, client):
+    response = await client.post(
+        LOGIN_LINK,
+        data=payload,
+    )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -85,69 +100,36 @@ async def test_incomplete_credentials(payload):
         },
     ],
 )
-@pytest.mark.asyncio
-async def test_invalid_credentials(payload):
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(
-            LOGIN_LINK,
-            data=payload,
-        )
+async def test_invalid_credentials(payload, client):
+    response = await client.post(
+        LOGIN_LINK,
+        data=payload,
+    )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@pytest.mark.asyncio
-async def test_non_existing_user():
+async def test_non_existing_user(client):
     payload = {
         "username": f"INVALID_{testvars.USER1_USERNAME}_INVALID",
         "password": "valid",
     }
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(
-            LOGIN_LINK,
-            data=payload,
-        )
+    response = await client.post(
+        LOGIN_LINK,
+        data=payload,
+    )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@pytest.mark.asyncio
-async def test_malicious_input_defence(session):
+async def test_malicious_input_defence(session, client):
     payload = {
         "username": f"TRUNCATE TABLE {User.__tablename__};",
         "password": "valid_password",
     }
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(
-            LOGIN_LINK,
-            data=payload,
-        )
+    response = await client.post(
+        LOGIN_LINK,
+        data=payload,
+    )
     users = await session.execute(select(User))
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert users.first() is not None
-
-
-@pytest.mark.asyncio
-async def test_refresh_updated():
-    valid_payload = {
-        "username": testvars.USER1_USERNAME,
-        "password": testvars.USER1_PASSWORD,
-    }
-    async with AsyncClient(
-            transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(
-            LOGIN_LINK,
-            data=valid_payload,
-        )
-        prev_token = response.json()["refresh_token"]
-        await client.post(
-            LOGIN_LINK,
-            data=valid_payload,
-        )
-    assert await TokenManager().get_refresh(1) != prev_token

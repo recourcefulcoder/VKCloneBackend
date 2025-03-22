@@ -15,6 +15,11 @@ async def get_personal_info(user: dp.FetchUserDep):
     return user.model_dump()
 
 
+@router.put("/change-info")
+async def update(user: dp.FetchUserDep):
+    pass
+
+
 @router.get("/items")
 async def get_items(token: Annotated[str, Depends(dp.oauth2_scheme)]):
     return {"token": token}

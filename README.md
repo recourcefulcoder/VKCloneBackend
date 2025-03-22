@@ -77,6 +77,12 @@ Besides of obvious requirement for meeting PEP8 requirements, _import-order requ
 
 - Chosen import order rule - cryptography for [flake8-import-order plugin](https://pypi.org/project/flake8-import-order/)
 
+> [!WARNING]
+> F401 rule (imported but unused) is disabled for user/tests/ directory, since it requires unused imports
+> (for details see users/tests/DOCS.md) 
+> 
+> Ensure that F401 requirement (besides required scope) is met on your own.
+
 ### Code documentation
 Code is documented per service in order not to overload this manual. Each service has it's own
 README.md, where you can find its local design conventions and class/function docs.

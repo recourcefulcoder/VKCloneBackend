@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 
-alembic upgrade test@head
+alembic upgrade main@head
 cd src
 fastapi run main.py

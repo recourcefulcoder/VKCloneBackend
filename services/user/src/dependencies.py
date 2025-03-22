@@ -33,18 +33,18 @@ LoginFormData = Annotated[OAuth2PasswordRequestForm, Depends()]
 async def fetch_user(
     session: SessionDep, token: Annotated[str, Depends(oauth2_scheme)]
 ):
-    email = decode_jwt_token(token)
-    if email is None:
+    user_id = decode_jwt_token(token)
+    if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    res = await session.execute(select(User).where(User.email == email))
+    res = await session.execute(select(User).where(User.id == user_id))
     user = res.scalar()
     pydantic_user = UserInfo(
-        id=user.id,
-        email=email,
+        id=user_id,
+        email=user.email,
         username=user.username,
         created_date=user.created_date,
     )

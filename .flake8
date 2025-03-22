@@ -1,2 +1,4 @@
 [flake8]
 exclude=venv,migrations,.git,.github,__pycache__,alembic,.pytest_cache
+per-file-ignores =
+    **tests/*: F401

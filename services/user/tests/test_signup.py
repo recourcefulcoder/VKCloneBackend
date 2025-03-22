@@ -2,17 +2,15 @@ from database.models import User
 
 from fastapi import status
 
-from httpx import ASGITransport, AsyncClient
-
 import pytest
 
 import pytest_asyncio
 
 from sqlalchemy.sql import delete, select
 
-from src.main import app
-
 import testvars
+
+from . import pytestmark
 
 REGISTER_LINK = "/user/auth/signup"
 
@@ -26,18 +24,14 @@ async def _delete_odd_users(session):
     await session.commit()
 
 
-@pytest.mark.asyncio
-async def test_signup_valid_data(session):
+async def test_signup_valid_data(session, client):
     valid_username = "kiric50"
     user_data = {
         "username": valid_username,
         "email": "kiric50@gmail.com",
         "password": "Jungle",
     }
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(REGISTER_LINK, json=user_data)
+    response = await client.post(REGISTER_LINK, json=user_data)
     query_res = await session.execute(
         select(User).where(User.username == valid_username)
     )
@@ -64,12 +58,8 @@ async def test_signup_valid_data(session):
         },
     ],
 )
-@pytest.mark.asyncio
-async def test_signup_incomplete_data(data):
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(REGISTER_LINK, json=data)
+async def test_signup_incomplete_data(data, client):
+    response = await client.post(REGISTER_LINK, json=data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -83,17 +73,13 @@ async def test_signup_incomplete_data(data):
         "inv😊alid@gmail.com",
     ],
 )
-@pytest.mark.asyncio
-async def test_signup_invalid_email(email):
+async def test_signup_invalid_email(email, client):
     data = {
         "username": "valid_username",
         "password": "valid password",
         "email": email,
     }
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(REGISTER_LINK, json=data)
+    response = await client.post(REGISTER_LINK, json=data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -107,15 +93,11 @@ async def test_signup_invalid_email(email):
         "unuÆalÅ",
     ],
 )
-@pytest.mark.asyncio
-async def test_signup_invalid_password(password):
+async def test_signup_invalid_password(password, client):
     data = {
         "username": "valid_username",
         "password": password,
         "email": "valid_email@gmail.com",
     }
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as client:
-        response = await client.post(REGISTER_LINK, json=data)
+    response = await client.post(REGISTER_LINK, json=data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

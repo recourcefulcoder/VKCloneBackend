@@ -8,7 +8,7 @@ Table of contents:
 - [Running in dev mode](#running-service-in-developer-mode)
 - [Debug application mode](#debug-mode)
 - [Notes on testing](#testing) (**MUST-READ** before launching!)
-- [Dockerization]()
+- [Dockerization](#dockerization)
 - [Documentation](#documentation)
   - [Environment variables used](#environment-variables)
   - [Project general structure](#project-structure) 
@@ -78,15 +78,20 @@ python module
 And that's it for now. Yet It is not ruled out this section will expand with time.
 
 ## Testing
-Since tests may perform CRUD operations on a database, they need an isolated database for runtime.
+Since tests WILL perform CRUD operations on a database, they need an isolated database for runtime.
 This may be achieved in two ways - either manually via providing credentials for TEST database in 
 .env file or via running tests in test Docker container (not supported currently)
 
 Once more
 > [!CAUTION]
-> DO NOT run tests on your production/development database, as they MOST DEFINITELY will
-> violate data in them. Take care of providing credentials for TEST database in .env file 
-> when running tests manually
+> DO NOT run tests in your production/development environment, as they MOST DEFINITELY will
+> violate data in **PostgreSQL** _and_ **Redis** databases.
+ 
+There are two ways to actually launch testing:
+1. (_preferred_) by using Docker container for running application copy in test environment 
+2. building test environment yourself (so-called "manually")
+
+Both are described below
 
 ### Word about test migration
 Test migration creates two test users:
@@ -104,9 +109,10 @@ These two are used for testing auth endpoints.
 ### Running with Docker instructions
 Preferred since is safer and easier to run
 
-In order to run tests, execute from the root directory of the service:
+In order to set up test environment and run tests, execute from the root directory of the service:
 ```bash
 docker compose up --build -d
+docker exec user-service sh -c "alembic upgrade test@head"
 docker exec user-service pytest
 ```
 (replacing **_user-service_** with actual name of service container running; 
@@ -121,6 +127,11 @@ docker compose down -v
 1. Create and set up a test PostgreSQL database
 2. Create and set up Redis DB (or set [USER_DEBUG env variable](#environment-variables) to 
 True to ask pytest to spam Redis process himself)
+
+If you are using DEBUG option in development, take care of [dump.rdb](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/#snapshotting)
+management - move your development dump.rdb somewhere to the side disk during launching tests
+
+
 3. Provide credentials for connecting to TEST database in .env file
 
 > [!CAUTION]
@@ -155,10 +166,8 @@ Even though project has Dockerfile, it is not yet considered to be valid Docker,
 As another testing mechanism will be implemented, it will be possible to use same Dockerfile for 
 blueprinting prod-like Docker image; for now it requires following adjustments:
 - add /tests to .dockerignore
-- edit entrypoint.sh: rewrite line which runs database migrations to 
-```bash
-alembic upgrad main@head
-```
+- add alembic/versions/47064... (add_test_data) to .dockerignore
+
 
 ## Documentation
 
@@ -264,7 +273,7 @@ Payload requirements:
 - must contain key "refresh_token" 
 
 ### Authorization utils (auth.py)
-#### TokenManager class 
+#### RedisManager class 
 This class is basically a wrapper of redis-py asynchronous Redis class
 (see examples of usage [here](https://redis-py.readthedocs.io/en/latest/connections.html)),
 created in order to ensure singleton implementation (meaning to ensure that redis dependency always accesses same
@@ -280,13 +289,16 @@ Class attributes:
 -----------
 Class methods:
 
-There are two groups of this class' methods:
-1. These are mirroring [redis-py commands](https://redis-py.readthedocs.io/en/latest/commands.html).
+This class' methods are mirroring [redis-py commands](https://redis-py.readthedocs.io/en/latest/commands.html).
 in order to provide API without accessing **_redis** instance directly
 - async def setex - mirroring Redis instance's method setex
 - async def get - mirroring Redis instance's method get
 - async def deletes - mirroring Redis instance's method get
-2. Refresh token-specific
+
+#### TokenManager class
+Inherits from RedisManager, providing API for setting/deleting/getting refresh tokens from Redis
+
+Class methods:
 - async def get_refresh(user_id: int) - returns refresh token for user with ID user_id; 
 returns None if not found or str (value of refresh) if found
 - async def delete_refresh(user_id: int) - deletes refresh token for user with ID user_id
