@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from src.main import app
 
-import testvars
+from . import testvars
 
 
 @pytest_asyncio.fixture
