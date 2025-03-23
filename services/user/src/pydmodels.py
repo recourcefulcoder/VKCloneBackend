@@ -58,3 +58,9 @@ class UserInfo(BaseModel):
     username: str
     email: str
     created_date: datetime.datetime
+
+
+class UserUpdate(BaseModel):
+    password: Optional[str] = None
+    username: Optional[str] = None
+    email: Optional[str] = None

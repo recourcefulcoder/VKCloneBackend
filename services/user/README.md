@@ -144,10 +144,11 @@ For that, run from the root directory of the service:
 ```bash
 alembic upgrade test@head
 ```
-5. Install test dependencies
+5. Install project and test requirements
 
 They are listed in test-req.txt file; you can install them with
 ```bash
+pip install -r requirements.txt 
 pip install -r test-req.txt 
 ```
 

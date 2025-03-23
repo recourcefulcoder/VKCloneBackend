@@ -19,7 +19,7 @@ INFO_LINK = app.url_path_for("get_personal_info")
 async def test_200_on_valid_token(client):
     response = await client.get(
         INFO_LINK,
-        headers={"Authorization": F"Bearer {generate_access_token(USER_ID)}"}
+        headers={"Authorization": f"Bearer {generate_access_token(USER_ID)}"},
     )
     assert response.status_code == status.HTTP_200_OK
 
@@ -27,7 +27,7 @@ async def test_200_on_valid_token(client):
 async def test_valid_payload_returned(client):
     response = await client.get(
         INFO_LINK,
-        headers={"Authorization": F"Bearer {generate_access_token(USER_ID)}"}
+        headers={"Authorization": f"Bearer {generate_access_token(USER_ID)}"},
     )
     keys = response.json().keys()
     assert "id" in keys
@@ -43,12 +43,11 @@ async def test_valid_payload_returned(client):
         "",
         generate_access_token(testvars.USERS_AMOUNT + 1),  # not existing user
         generate_jwt_token(USER_ID, timedelta(minutes=-1)),
-    ]
+    ],
 )
 async def test_401_on_invalid_token(token, client):
     response = await client.get(
-        INFO_LINK,
-        headers={"Authorization": F"Bearer {token}"}
+        INFO_LINK, headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 

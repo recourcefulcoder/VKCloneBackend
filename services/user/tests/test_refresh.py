@@ -95,8 +95,8 @@ async def test_invalid_refresh(refresh):
 #         .where(User.id == new_user_id)
 #     )
 #     yield refresh
-
-# @pytest.mark.asyncio
+#
+#
 # async def test_deleted_user_refresh(deleted_user_refresh, client):
 #     response = await client.post(
 #         REFRESH_LINK, json={"refresh_token": deleted_user_refresh}
