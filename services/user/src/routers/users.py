@@ -1,8 +1,6 @@
-from typing import Annotated
-
 from database.models import User
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from sqlalchemy.sql import update
 
@@ -45,8 +43,3 @@ async def update_user(
             setattr(user, key, value)
 
     return user.model_dump()
-
-
-@router.get("/items")
-async def get_items(token: Annotated[str, Depends(dp.oauth2_scheme)]):
-    return {"token": token}

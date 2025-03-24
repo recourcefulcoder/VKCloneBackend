@@ -14,6 +14,7 @@ Table of contents:
   - [Project general structure](#project-structure) 
     - [Project configuration in config.py](#configpy-file) 
   - [Database models](#database-models-user-model) 
+  - [Pydantic models](#pydantic-models)
   - [Endpoint handlers docs](#endpoints) 
   - [Authorization utils](#authorization-utils-authpy)
 
@@ -112,8 +113,8 @@ Preferred since is safer and easier to run
 In order to set up test environment and run tests, execute from the root directory of the service:
 ```bash
 docker compose up --build -d
-docker exec user-service sh -c "alembic upgrade test@head"
-docker exec user-service pytest
+docker exec user-<container_name> sh -c "alembic upgrade test@head"
+docker exec user-<container_name> pytest
 ```
 (replacing **_user-service_** with actual name of service container running; 
 yet it truly is the name of the container by default )
@@ -125,12 +126,17 @@ docker compose down -v
 
 ### Manual running instructions
 1. Create and set up a test PostgreSQL database
-2. Create and set up Redis DB (or set [USER_DEBUG env variable](#environment-variables) to 
-True to ask pytest to spam Redis process himself)
+2. Create and set up Redis DB. You can do it via CLI: for example, on Linux run:
+```bash
+sudo apt update
+sudo apt install redis-tools # for redis-cli
+sudo snap install redis
+
+redis-server 
+```
 
 If you are using DEBUG option in development, take care of [dump.rdb](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/#snapshotting)
 management - move your development dump.rdb somewhere to the side disk during launching tests
-
 
 3. Provide credentials for connecting to TEST database in .env file
 
@@ -151,8 +157,14 @@ They are listed in test-req.txt file; you can install them with
 pip install -r requirements.txt 
 pip install -r test-req.txt 
 ```
+6. Run celery worker 
 
-6. Run tests with pytest
+For that, from the root directory of the service run in CLI:
+```bash
+celery -A src.celery_app worker --loglevel=info --detach
+```
+
+7. Run tests with pytest
 
 From the root directory of the project execute
 ```bash
@@ -187,6 +199,8 @@ specified:
 | POSTGRES_DB | name of PostgreSQL DB for the service |
 |||
 | USER_DEBUG | defines whether application is running in debug mode or not; _False_ by default |
+|||
+| CELERY_BROKER_URL | defines url for celery broker (Redis is used) |
 
 ### Project structure
 
@@ -196,6 +210,7 @@ specified:
 (handling redis operations) and token-manipulation functions (creation/verification)
 - **dependencies.py** - contains app dependencies to be included
 - **pydmodels.py** - contains Pydantic models, used for request validation in FastAPI request handlers
+- **celery_app.py** - contains definition for celery application and its tasks inside a project 
 
 Main logic of the application (meaning endpoint handlers) is defined in routers/users.py
 
@@ -222,8 +237,25 @@ Variables of config.py:
 | ACCESS_EXP_TIME | datetime.timedelta object, representing **access token** lifetime |
 | REFRESH_EXP_TIME | datetime.timedelta object, representing **refresh token** lifetime |
 
+### Database's ORM documentation
 
-### Database models (User model)
+Database is managed via SQLAlchemy's ORM; all logic for database interactions is stored in 
+"/database" directory of the root directory.
+
+Python modules of the directory:
+- models.py - defines User model
+- engine.py - defines [engine](https://docs.sqlalchemy.org/en/20/core/connections.html) to 
+be used for ORM-based query execution
+- event_listeners.py - defines listeners, which are handling automatic token deletion on 
+user deletion 
+
+> [!IMPORTANT]
+> Implemented mechanism of automatic deletion user's refresh token on user deletion from database
+> via SQLAlchemy's ORM. It is done via [SQLAlchemy's event](https://docs.sqlalchemy.org/en/20/core/event.html) 
+> listeners. However, event is only triggered on [session.delete()](https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.Session.delete) 
+> call, so developers are encouraged to use session.delete() on possible future upgrades 
+
+#### Database models (User model)
 
 It was decided to stick to separate ORM logic and data validation (via Pydantic) for security 
 reasons - in order not to expose unintentionally some sensitive user information in API returns.
@@ -232,6 +264,28 @@ So the model is declared using SQLAlchemy.
 
 Password is automatically hashed on user creation - since that, password validation on 
 user creation/update must be done outside from SQLAlchemy ORM model (via Pydantic models, for example)
+
+### Pydantic models
+
+#### UserInfo
+
+Declares structure for fetch_user dependency (one checking validation and 
+providing user credentials for usage inside endpoint handler) and structure of /info response JSON object.
+
+Defines fields:
+- id
+- username
+- email
+- created_date
+
+#### UserUpdate
+Declares structure of possible JSON payload for updating user on /change-info endpoint. All fields defined 
+are not required, those not mentioned are not taken into account on /change-info processing
+
+Defines fields:
+- password
+- email
+- username
 
 ### Endpoints
 
@@ -273,6 +327,27 @@ refresh and access tokens (+ deletes old/adds new refresh token to Redis)
 Payload requirements:
 - must contain key "refresh_token" 
 
+
+#### /info endpoint
+Allowed methods:
+- GET
+
+Protected with JWT-based authorization; if passed (valid authorization header), extracts user id 
+from payload, makes request to the databas eand returns info about user in JSON format.
+
+Returned JSON structure is determined by [UserInfo](#userinfo) Pydantic model
+
+#### /change-info endpoint
+Allowed methods: 
+- PUT
+
+Protected with JWT-based authorization; 
+Accepts JSON payload, which structure if determined by [UserUpdate](#userupdate) Pydantic model
+
+sets new field values for user, extracted from JWT-token "sub" value, returns JSON containing 
+current user's information after update. Structure of return JSON object is determined by 
+[UserInfo](#userinfo) Pydantic model  
+
 ### Authorization utils (auth.py)
 #### RedisManager class 
 This class is basically a wrapper of redis-py asynchronous Redis class
@@ -304,7 +379,7 @@ Class methods:
 returns None if not found or str (value of refresh) if found
 - async def delete_refresh(user_id: int) - deletes refresh token for user with ID user_id
 - async def set_refresh(self, user_id: int, refresh: str) - sets a refresh for user on key "refresh_token:<user_id>"
-
+ 
 
 #### Token-related functions
 - generate_access_token(email: str) - generates JWT access token, based on email provided.

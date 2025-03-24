@@ -7,9 +7,7 @@ import pytest
 from src.auth import generate_access_token, generate_jwt_token
 from src.main import app
 
-import testvars
-
-from . import pytestmark
+from . import pytestmark, testvars
 
 
 USER_ID = testvars.USER_IDS[0]

@@ -11,9 +11,7 @@ from sqlalchemy.sql import select
 from src.auth import TokenManager
 from src.main import app
 
-import testvars
-
-from . import pytestmark
+from . import pytestmark, testvars
 
 LOGIN_LINK = app.url_path_for("login")
 

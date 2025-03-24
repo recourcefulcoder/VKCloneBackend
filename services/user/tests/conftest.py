@@ -1,6 +1,4 @@
-import subprocess
-
-import config
+from asgi_lifespan import LifespanManager
 
 from database.engine import engine
 
@@ -24,18 +22,24 @@ async def session():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def _run_redis_if_needed():
-    proc = None
-    if config.DEBUG:
-        proc = subprocess.Popen("redis-server --port 6379", shell=True)
+def _run_services_if_needed():
+    proc = []
+    # if config.DEBUG:
+    #     proc.append(
+    #         subprocess.Popen(
+    #             "celery -A src.celery_app worker --loglevel=info", shell=True
+    #         )
+    #     )
+    #     sleep(2)  # give services time for startup
     yield
-    if config.DEBUG:
-        proc.kill()
+    for pr in proc:
+        pr.kill()
 
 
 @pytest_asyncio.fixture
 async def client():
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
-    ) as async_client:
-        yield async_client
+    async with LifespanManager(app):
+        async with AsyncClient(
+            transport=ASGITransport(app), base_url=testvars.TEST_BASE_URL
+        ) as async_client:
+            yield async_client

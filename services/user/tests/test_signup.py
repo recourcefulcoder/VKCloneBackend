@@ -8,9 +8,7 @@ import pytest_asyncio
 
 from sqlalchemy.sql import delete, select
 
-import testvars
-
-from . import pytestmark
+from . import pytestmark, testvars
 
 REGISTER_LINK = "/user/auth/signup"
 

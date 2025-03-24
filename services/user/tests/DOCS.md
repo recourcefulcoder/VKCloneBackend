@@ -32,6 +32,6 @@ this sets loop scope for asynchronous tests, as mentioned in [intro section](#do
 ## conftest.py fixtures
 
 1. session
-2. _run_redis_if_needed
+2. _run_services_if_needed - if tests are run in debug mode, runs Redis service and a Celery worker
 3. client
 

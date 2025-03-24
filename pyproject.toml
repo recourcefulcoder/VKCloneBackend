@@ -12,7 +12,6 @@ extend-exclude =  """
 line-length = 79
 
 [tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "session"
 pythonpath = [
     "."
 ]

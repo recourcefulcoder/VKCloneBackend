@@ -14,6 +14,7 @@ load_local_and_global_environ()
 
 DB_HOST = os.getenv("DB_HOST", default="localhost")
 REDIS_HOST = os.getenv("REDIS_HOST", default="localhost")
+REDIS_PORT = os.getenv("REDIS_PORT", default="6379")
 
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
@@ -31,3 +32,5 @@ DEBUG = os.getenv("USER_DEBUG", default="False").lower() in [
     "y",
     "1",
 ]
+
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"

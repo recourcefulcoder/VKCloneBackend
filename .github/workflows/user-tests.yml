@@ -58,6 +58,11 @@ jobs:
       - name: Migrate Test Database
         run: alembic upgrade test@head
 
+      - name: Start Celery Worker
+        run: |
+          nohup celery -A your_project.celery_app worker --loglevel=info > celery.log 2>&1 &
+          sleep(5)
+
       - name: Run tests
         run: |
           cd tests

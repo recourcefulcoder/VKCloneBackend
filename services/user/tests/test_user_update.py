@@ -15,9 +15,7 @@ from sqlalchemy.sql import delete, insert, select, update
 from src.auth import generate_access_token, generate_jwt_token
 from src.main import app
 
-import testvars
-
-from . import pytestmark
+from . import pytestmark, testvars
 
 
 UPDATE_USER_ID = testvars.USERS_AMOUNT + 1
