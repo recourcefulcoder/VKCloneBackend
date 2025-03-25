@@ -59,9 +59,10 @@ jobs:
         run: alembic upgrade test@head
 
       - name: Start Celery Worker
+        shell: bash
         run: |
-          nohup celery -A your_project.celery_app worker --loglevel=info > celery.log 2>&1 &
-          sleep(5)
+          celery -A src.celery_app worker --loglevel=info --detach
+          sleep 3s
 
       - name: Run tests
         run: |

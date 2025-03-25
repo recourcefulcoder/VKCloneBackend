@@ -97,7 +97,7 @@ async def deleted_user_refresh(session):
         new_user = await session.get(User, result.scalar())
         await session.delete(new_user)
         await session.commit()
-    await asyncio.sleep(1)  # wait till redis executes token deletion
+    await asyncio.sleep(1)  # wait till celery deletion task is executed
     yield refresh
 
 

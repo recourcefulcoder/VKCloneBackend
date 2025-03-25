@@ -51,7 +51,7 @@ async def test_refresh_updated(client):
         data=valid_payload,
     )
     prev_token = response.json()["refresh_token"]
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
     # in order to set different exp time, otherwise
     # token pair will be same
 
