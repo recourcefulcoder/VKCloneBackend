@@ -17,6 +17,7 @@ Table of contents:
 - [Deployment guide](#deployment)
   - [Running single service  in dev mode](#running-single-service-in-developer-mode) 
 - [Documentation](#documentation)
+  - [Architecture description](#) 
   - [Code style conventions](#code-style-conventions)
   - [General documentation](#code-documentation)
 
@@ -61,7 +62,12 @@ For instructions on how to run a single service in dev mode check service's READ
 
 ## Documentation
 
-Any documentation will appear there as code will appear in the project ^_^
+### Architecture
+Was decided to implement system in microservices paradigm, since each component of the 
+system described above needs consistency and independence of operations.
+
+#### Architectural design decisions:
+Left empty for now 
 
 ### Code style conventions
 It is crucial to state all development practices on the start - so here we are, stating _style conventions_!

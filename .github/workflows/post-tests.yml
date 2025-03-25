@@ -1,13 +1,13 @@
-name: user-tests
+name: post-tests
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - user_service
+      - post_service
 
 jobs:
-  testing-user:
+  testing-post:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -15,7 +15,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: user-service-test
+          POSTGRES_DB: post-service-test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -23,21 +23,12 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping || exit 1"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
 
     env:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: user-service-test
-      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/services/user:${{ github.workspace }}/services/user/tests:$PYTHONPATH
+      POSTGRES_DB: post-service-test
+      PYTHONPATH: ${{ github.workspace }}/services/post:$PYTHONPATH
       JWT_SECRET_KEY: very_secret_secret
     strategy:
       matrix:
@@ -45,7 +36,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: services/user
+        working-directory: services/post
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -56,12 +47,7 @@ jobs:
           pip install -r test-req.txt
 
       - name: Migrate Test Database
-        run: alembic upgrade test@head
-
-      - name: Start Celery Worker
-        run: |
-          celery -A src.celery_app worker --loglevel=info --detach
-          sleep 5s
+        run: alembic upgrade main@head
 
       - name: Run tests
         run: |
