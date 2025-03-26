@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
+from typing import List
 
 from database.models import Post
 
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI,  Query, Response, status
 
 from . import dependencies as dp
 from . import pydmodels as pym
@@ -21,7 +22,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/post/{post_id}")
+@app.get("/post/get/{post_id}")
 async def get_post(post_id: int, session: dp.SessionDep, response: Response):
     post = await session.get(Post, post_id)
     if post is None:
@@ -35,3 +36,9 @@ async def get_post(post_id: int, session: dp.SessionDep, response: Response):
         creation=post.creation_date,
     )
     return post.model_dump()
+
+
+@app.get("/post/files")
+async def get_files(id: List[int] = Query(None, alias="id")):
+    id_list = [int(given_id) for given_id in id]
+    return {"given_ids": id_list}
