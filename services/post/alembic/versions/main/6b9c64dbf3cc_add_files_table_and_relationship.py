@@ -32,6 +32,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['post_id'], ['post.id'], ),
     sa.PrimaryKeyConstraint('post_id', 'file_id')
     )
+
     op.add_column("post", sa.Column("author_id", sa.Integer, nullable=False))
 
 
@@ -39,3 +40,4 @@ def downgrade() -> None:
     """Downgrade schema."""
     op.drop_table('post_file_association_table')
     op.drop_table('file')
+    op.drop_column('post', 'author_id')

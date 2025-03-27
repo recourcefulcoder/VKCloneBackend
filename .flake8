@@ -2,3 +2,4 @@
 exclude=venv,migrations,.git,.github,__pycache__,alembic,.pytest_cache
 per-file-ignores =
     **tests/*: F401
+    **tests/__init__.py: T201

@@ -16,9 +16,16 @@ DEBUG = os.getenv("POST_DEBUG", default="false").lower() in [
     "y",
     "1",
 ]
+TESTING = os.getenv("POST_TESTING", default="false").lower() in [
+    "true",
+    "yes",
+    "y",
+    "1",
+]
 
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
+PROD_POSTGRES_DB = os.getenv("POSTGRES_DB")
+TEST_POSTGRES_DB = os.getenv("TEST_POSTGRES_DB")
 
 DB_HOST = os.getenv("POSTGRES_HOST", default="localhost")

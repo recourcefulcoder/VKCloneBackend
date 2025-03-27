@@ -27,7 +27,8 @@ jobs:
     env:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: post-service-test
+      TEST_POSTGRES_DB: post-service-test
+      POST_TESTING: True
       PYTHONPATH: ${{ github.workspace }}/services/post:$PYTHONPATH
       JWT_SECRET_KEY: very_secret_secret
     strategy:
@@ -47,7 +48,9 @@ jobs:
           pip install -r test-req.txt
 
       - name: Migrate Test Database
-        run: alembic upgrade main@head
+        run: |
+          alembic upgrade main@head
+          alembic upgrade dangerous@head
 
       - name: Run tests
         run: |
