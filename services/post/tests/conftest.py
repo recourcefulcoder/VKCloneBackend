@@ -35,7 +35,12 @@ async def add_test_data(session: AsyncSession):
         creation_date=testvars.POST_DATA["creation_date"],
         last_edit=testvars.POST_DATA["last_edit"],
     )
-    session.add(post)
+    file = File(
+        id=testvars.FILE_DATA.get("id"),
+        filename=testvars.FILE_DATA.get("filename"),
+        post_id=testvars.FILE_DATA.get("post_id"),
+    )
+    session.add_all([post, file])
     await session.commit()
 
 
@@ -48,16 +53,18 @@ async def _add_data(setup_session):
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def _delete_data(setup_session):
     yield
-    await setup_session.execute(delete(Post))
     await setup_session.execute(delete(File))
+    await setup_session.execute(delete(Post))
     await setup_session.commit()
 
 
 @pytest_asyncio.fixture
 async def _rollback_any_changes(session):
     yield
-    await session.execute(delete(Post))
     await session.execute(delete(File))
+    await session.execute(delete(Post))
+    await session.commit()
+
     await add_test_data(session)
 
 

@@ -29,3 +29,11 @@ PROD_POSTGRES_DB = os.getenv("POSTGRES_DB")
 TEST_POSTGRES_DB = os.getenv("TEST_POSTGRES_DB")
 
 DB_HOST = os.getenv("POSTGRES_HOST", default="localhost")
+
+NFC_STORAGE_PATH = os.getenv("NFC_STORAGE_PATH")
+
+FILE_STORAGE_DIRECTORY = (
+    os.getenv("POST_DEBUG_FILE_STORAGE", default="/uploads")
+    if DEBUG
+    else NFC_STORAGE_PATH
+)

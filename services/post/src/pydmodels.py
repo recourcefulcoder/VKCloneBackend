@@ -4,8 +4,10 @@ from pydantic import BaseModel
 
 
 class PostInfo(BaseModel):
-    id: Optional[int] = None
-    title: Optional[str] = None
-    content: Optional[str] = None
-    author_username: Optional[str] = None
-    creation_date: Optional[str] = None
+    id: int
+    title: str
+    author_id: int
+
+    content: str
+    creation_date: str
+    last_edit: Optional[str] = None

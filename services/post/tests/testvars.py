@@ -1,8 +1,10 @@
 import datetime
 
 
+POST_ID = 1
+
 POST_DATA = {
-    "id": 1,
+    "id": POST_ID,
     "author_id": 1,
     "title": "Cute post title UwU",
     "content": '<div style="color:red";>Cute post content</div>',
@@ -15,15 +17,9 @@ POST_DATA = {
 
 FILE_DATA = {
     "id": 1,
+    "post_id": POST_ID,
     "filename": "static/cute_ears.jpg",
 }
-
-POST_TO_FILE_BOUNDS = [
-    {
-        "post_id": 1,
-        "file_id": 1,
-    }
-]
 
 TEST_BASE_URL = "http://test"
 

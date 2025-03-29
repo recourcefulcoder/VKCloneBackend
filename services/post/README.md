@@ -40,19 +40,32 @@ Specify this variables in .env file in the root directory of the service in foll
     VARNAME1=value1
     VARNAME2=value2
 
-3. Update PYTHONPATH with root directory of the service
+> [!IMPORTANT]
+> Set "POST_DEBUG" environment variable to _True_!
+
+3. Create file storage directory, corresponding to [POST_DEBUG_FILE_STORAGE](#environment-variables) 
+environment variable
+
+4. Update PYTHONPATH with root directory of the service
 
 To do that in Linux, run
 ```bash
 export PYTHONPATH="path/to/root/dir/services/<service_name>:$PYTHONPATH"
 ```
-4. Create PostgreSQL database and migrate with alembic
+5. Create PostgreSQL database and migrate with alembic
 
 Create a PostgreSQL service, provide valid credentials for it in .env file (see above)
 and migrate it using alembic. From the root directory of service, run:
 
 ```bash
 alembic upgrade main@head
+alembic upgrade dangerous@head
+```
+
+You may as well install some test data if you wish to test an application manually - 
+it is done by using alembic's [branch "dev"](#database-migrations)
+```bash
+alembic upgrade dev@head
 ```
 
 6. Run FastAPI
@@ -62,11 +75,11 @@ From "src" directory of the service run
 fastapi dev main.py
 ``` 
 
-7. _Enjoy ^\_^_
+6. _Enjoy ^\_^_
 
 
 ### Running with Docker Compose
-Not implemented yet
+              Not implemented yet
 
 ## Testing notes
 Tests are not using mocking for database connections - meaning that they will violate data in the 
@@ -102,69 +115,46 @@ pytest
 
 ### End goal outline
 This section defines complete list of requirements for the service endpoints, both
-with information about which are implemented on the moment
+with information about which are implemented on the moment.
+
+> [!NOTE]
+> All actual interaction with files (meaning processing them and getting from server)
+> are handled by Media Processing service (see main README.md in the root of the project),
+> so until this service is implemented, post will actually not implement any logic related 
+> to file I/O.
 
 Endpoints table
-1. get_files (**NOT IMPLEMENTED**)
-- URL: /post/files?id=...
-- method: GET
-- description: <br><br>
-requests files with IDs, provided in request URL, gets files returned <br>
-RESPONSE: requested files<br><br>
-URL example (requests files with ids 12, 45 and 54): 
-```
-/post/files?id=12&id=45&id=54
-```
-2. GraphQL endpoint (**NOT IMPLEMENTED**)
-- URL: /post/graphql
-- method: POST
-- description: accepts GraphQL query/mutation, performs required CRUD operations on posts. <br><br> 
 
-**MUTATION** requests (creation/updating/deletion) 
+> [!NOTE]
+> _get_files_ endpoint which was defined in this document was moved to the 
+> Media Processing service, as it contains logic related to file I/O. 
 
-These types of request require user's authentication 
-(via JWT-token, sent in "Authorization: Bearer <token>" request header)
-
-RESPONSE for mutations on successful operation is json {"message": "success"}<br>
-
-- CREATE mutation
-  - creates a post from provided data and attaches it to token holder
-  - if any files need to be attached on creation, expects request with "**_Content-Type_**"
-  header set to "mulitpart/form-data"
-  <br><br>
-  Mutation template: LEFT BLANK FOR NOW
-
- 
-- UPDATE mutation <br>
-  - updates post with given info, if token holder is post's owner; 
-  - updates "last_edit" column of the post
-  - if any files should be added, expects them to be sent in request with 
-  "_Content-Type: multipart/form-data_" header
-  <br><br>
-  Mutation template: LEFT BLANK FOR NOW
-
-
-- DELETE mutation<br>
-  - deletes post with provided credentials, if token holder is post's owner
-  <br><br>
-  Mutation template: LEFT BLANK FOR NOW
-
-**QUERY** requests 
-
-These don't require any authorization at all - any internet user may request any info 
-about posts, including ids of files attached (yet not files themselves here)
-
-Supported query options are: LEFT BLANK FOR NOW
-
-
-4. get_post (**NOT IMPLEMENTED**)
+1. get_post (**NOT IMPLEMENTED**)
 - URL: /post/get/{post_id}/
 - method: GET
 - description: <br><br>
 Returns information about single post with ID post_id; <br>
-REQUEST is done via GraphQL standard <br> RESPONSE is a valid JSON, containing requested info
+REQUEST doesn't have to contain any additional info <br> 
+RESPONSE: on _invalid_ returns 404 on invalid ID value; on _valid_ ID returns JSON, containing post info in given format:
+```json lines
+{
+  id: <post-id>,
+  title: <post-title>,
+  author_id: <id-of-posts-author>,
+  
+  content: <post-content>,
+  
+  creation_date: <creation-date>,  // in YYYY-MM-DDTHH:MM:SS.f format 
+  last_edit: <none-or-last-edit-date>, // in YYYY-MM-DDTHH:MM:SS.f format 
+  attachments: [    // or empty, if post contains no attachments
+    <first-file-id>,
+    <second-file-id>,
+    ...
+  ] 
+} 
+```
 
-4. create_post (**NOT IMPLEMENTED**)
+2. create_post (**NOT IMPLEMENTED**)
 - URL: /post/create/
 - method: POST
 - description: <br><br> 
@@ -173,7 +163,7 @@ AUTHORIZATION is provided by JWT token; post is attached to token owner <br>
 REQUEST is a valid JSON, containing all required fields + files that need to be attached to that post
 RESPONSE is {"message": "success"}
 
-5. change_post (**NOT IMPLEMENTED**)
+3. change_post (**NOT IMPLEMENTED**)
 - URL: /post/update/{post_id}/
 - method: PUT
 - description: <br><br> 
@@ -185,7 +175,7 @@ files should be deleted, JSON object contains key **"delete_files"**, which valu
 an array of file IDs to be deleted <br>
 RESPONSE: is {"message": "success"}
 
-3. fetch_feed (**NOT IMPLEMENTED**)
+4. fetch_feed (**NOT IMPLEMENTED**)
 - URL: /post/feed/
 - method: GET
 - description: <br><br> 
@@ -195,9 +185,11 @@ RESPONSE: JSON of following format
 [
   {
     id: <post_id>,
+    title: <post_title>,
     author: <authors_USERNAME>,
-    content: <post_text_context>,
-    created_date: <created_date>  /* in YYYY-MM-DDTHH:MM:SS.f format */
+    content: <posts-text-content>,
+    created_date: <date-of-creatiuon>,  /* in YYYY-MM-DDTHH:MM:SS.f format */
+    last_edit: <none-or-last-edit-date>,  /* in YYYY-MM-DDTHH:MM:SS.f format */
     attachments: [
       <file_1_id>,
       <file_2_id>,
@@ -306,6 +298,8 @@ They are both loaded from environment and are declared inside a file
 | TEST_POSTGRES_DB | represents TEST_POSTGRES_DB environment variable |
 | DB_HOST | represents POSTGRES_HOST environment variable; <br/> localhost if POSTGRES_HOST is not provided |
 |||
+| FILE_STORAGE_DIRECTORY | defines directory of file storage, related to the root of an application |
+|||
 | DEBUG | represents [POST_DEBUG](#environment-variables) environment variable; <br/> defaults to False |
 
 
@@ -319,5 +313,8 @@ They are both loaded from environment and are declared inside a file
 | TEST_POSTGRES_DB | defines name of the **_test_** database on postgres server |
 | POSTGRES_HOST | defines HOST for database server |
 |||
-| POST_DEBUG | states whether an application should run in **debug mode** or not; <br/><br/> DEBUG mode assumes that all required services (redis/celery, etc.) are run on an application startup, not externally in Kubernetes cluster/ Docker Compose file|
+| NFC_STORAGE_PATH | defines path for mounted Kubernetes PV storage (implemented in [NFC protocol](https://en.wikipedia.org/wiki/Network_File_System) |
+|||
+| POST_DEBUG | states whether an application should run in **debug mode** or not; <br/><br/> DEBUG mode assumes that all required services (redis/celery, etc.) are run on an application startup, not externally in Kubernetes cluster/ Docker Compose file |
+| POST_DEBUG_FILE_STORAGE | defines path to file storage when application is run in debug mode (related to the root directory);<br><br> defaults to "/uploads" |
 | POST_TESTING | states whether an application is run for testing; <br/><br/> TESTING set to true assumes specifying TEST_POSTGRES_DB variable for successful test run |
