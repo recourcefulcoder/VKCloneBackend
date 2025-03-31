@@ -1,0 +1,5 @@
+/venv/
+/uploads
+.env
+personal
+.pytest_cache

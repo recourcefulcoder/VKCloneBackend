@@ -11,7 +11,8 @@ Table of contents:
   - [With Docker Compose]()
 - [Notes on testing](#testing-notes) (**MUST READ** before launching)
 - [Documentation](#documentation)
-  - [Endpoint docs](#end-goal-outline)
+  - [Endpoint docs](#endpoints-outline)
+  - [File storage docs](#file-storage-documentation)
   - [Database](#database-documentation)
     - [Database migrations](#database-migrations)
   - [settings.py module](#settingspy-module)
@@ -89,6 +90,8 @@ configured test database.
 What is more - tests will not be run when environment variable POST_TESTING is not set to true - 
 so make sure to configure your .env file properly before running tests
 
+Tests have their own documentation, which is stored in ```tests/README.md```
+
 ### Instructions on setting up test environment 
 1. Set up required [environment variables](#environment-variables)
 
@@ -113,7 +116,7 @@ pytest
 
 ## Documentation
 
-### End goal outline
+### Endpoints outline
 This section defines complete list of requirements for the service endpoints, both
 with information about which are implemented on the moment.
 
@@ -129,7 +132,7 @@ Endpoints table
 > _get_files_ endpoint which was defined in this document was moved to the 
 > Media Processing service, as it contains logic related to file I/O. 
 
-1. get_post (**NOT IMPLEMENTED**)
+1. get_post 
 - URL: /post/get/{post_id}/
 - method: GET
 - description: <br><br>
@@ -158,10 +161,16 @@ RESPONSE: on _invalid_ returns 404 on invalid ID value; on _valid_ ID returns JS
 - URL: /post/create/
 - method: POST
 - description: <br><br> 
-Creates new post; <br> 
+Creates new pos: saves its data to database and saves attached files(for docs on file 
+storage structure see [File Storage documentation](#file-storage-documentation) <br> 
 AUTHORIZATION is provided by JWT token; post is attached to token owner <br>
-REQUEST is a valid JSON, containing all required fields + files that need to be attached to that post
+REQUEST is expected to have "multipart/form-data" content type, i.e. send data (together with files) in a form format <br>
 RESPONSE is {"message": "success"}
+
+About file's storage structure see [File Storage Docs](#file-storage-documentation)
+
+Formdata which will be considered is "title" and "content"; user's id will 
+be attached automatically based on JWT-token payload's value. 
 
 3. change_post (**NOT IMPLEMENTED**)
 - URL: /post/update/{post_id}/
@@ -207,6 +216,47 @@ RESPONSE: JSON of following format
 Random notes: 
 - all files by default are available to all users 
 
+### File storage documentation
+
+This application uses NFC (Network File System) in production for storing static files; 
+
+When new post file is accepted for being saved, it's metadata is stored in database table "files"
+(you can look its structure in [database documentation](#database-schema)). Most important is that
+database stores initial file's name, as it was uploaded.
+
+The directory structure is hash-based for optimizing file lookup on retrieval.
+
+**How file are actually stored?**
+
+Each filename is hashed using [md5 algorithm](https://en.wikipedia.org/wiki/MD5); after that,
+file is stored to directory 
+```
+/<first-two-symbols-of-hash>/<next-two-symbols-of-hash>/
+```
+
+with filename```<initial-filename-plus-database-id>.jpg```
+
+EXAMPLE <br>
+Let's assume user has downloaded file ```cute_cat.jpg```. It is stored in database, receiving ID 5467.
+
+Hash value of string ```"cute_cat.jpg"``` is ```3c808e77fc1b0aee4435533690be458d```.
+
+So, actual file will be stored in ```/3c/80/cute_cat_5467.jpg```
+
+#### Why is such directory structure used?
+To optimize lookup speed - maximum amount of directories in uploads is (26+10)^2=1296; maximum 
+amount of each subdirectory is (26+10)^2 as well; If each directory of "second level" stores 1000 
+files, we get total of ```1296 * 1296 * 1000 = 1.679.616.000``` files, and don't have to do driect 
+lookup of all of them in one place when we need one.
+
+_But why would we hash files instead of simply using filenames?_<br>
+Well, to guarantee balanced distribution. If we have 17 million files that start 
+with “cute”, we will end up putting 17 million files in the /cu/te directory.
+
+_And why do we add ID on the end of file in end directory?_<br>
+To avoid name collision, in case two user will wish to attach ```cute_cat.jpg``` 
+pic to their post 
+
 ### Database documentation
 
 Chosen database RDBMS is PostgreSQL; database calls are managed via SQLAlchemy
@@ -215,6 +265,10 @@ following files:
 - **models.py** - defines all database tables (SQLAlchemy's [models](https://docs.sqlalchemy.org/en/20/orm/quickstart.html#declare-models))
 - **engine.py** - declares database [engine](https://docs.sqlalchemy.org/en/20/core/connections.html), 
 used for connections to the database
+
+#### Database schema
+
+Left blank for now
 
 #### Database migrations
 
@@ -300,6 +354,8 @@ They are both loaded from environment and are declared inside a file
 |||
 | FILE_STORAGE_DIRECTORY | defines directory of file storage, related to the root of an application |
 |||
+| USER_INFO_LINK | represents [USER_INFO_LINK](#environment-variables) environment variable |
+|||
 | DEBUG | represents [POST_DEBUG](#environment-variables) environment variable; <br/> defaults to False |
 
 
@@ -314,6 +370,8 @@ They are both loaded from environment and are declared inside a file
 | POSTGRES_HOST | defines HOST for database server |
 |||
 | NFC_STORAGE_PATH | defines path for mounted Kubernetes PV storage (implemented in [NFC protocol](https://en.wikipedia.org/wiki/Network_File_System) |
+|||
+| USER_INFO_LINK | defines URL of user service's endpoint, which gives user information on valid auth token <br> |
 |||
 | POST_DEBUG | states whether an application should run in **debug mode** or not; <br/><br/> DEBUG mode assumes that all required services (redis/celery, etc.) are run on an application startup, not externally in Kubernetes cluster/ Docker Compose file |
 | POST_DEBUG_FILE_STORAGE | defines path to file storage when application is run in debug mode (related to the root directory);<br><br> defaults to "/uploads" |

@@ -1,6 +1,11 @@
+import logging
 import os
+import sys
 
 from src.utils import load_environ
+
+
+logger = logging.getLogger(__name__)
 
 
 def load_local_and_global_environ():
@@ -37,3 +42,21 @@ FILE_STORAGE_DIRECTORY = (
     if DEBUG
     else NFC_STORAGE_PATH
 )
+if FILE_STORAGE_DIRECTORY is None:
+    add_message = (
+        "Maybe you forgot to define " "NFC_STORAGE_PATH environment variable?"
+    )
+    logger.error(
+        "Improperly configured: "
+        "file storage directory not specified. " + add_message
+    )
+    sys.exit(1)
+
+USER_INFO_LINK = os.getenv("USER_INFO_LINK")
+
+if USER_INFO_LINK is None:
+    logger.error(
+        "Improperly configured: USER_INFO_LINK "
+        "environment variable not specified"
+    )
+    sys.exit(1)

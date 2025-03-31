@@ -1,8 +1,16 @@
-from typing import List
+from typing import Annotated, List
 
-from database.models import File, Post
+from database.models import File as FileDB, Post
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import (
+    APIRouter,
+    File,
+    Form,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 
 from sqlalchemy import select
 
@@ -19,7 +27,7 @@ async def get_post(post_id: int, session: dp.SessionDep, response: Response):
         response.status_code = status.HTTP_404_NOT_FOUND
         return {"error": "post with given ID not found"}
     files = await session.execute(
-        select(File.id).where(File.post_id == requested_post.id)
+        select(FileDB.id).where(FileDB.post_id == requested_post.id)
     )
     data = {
         "id": requested_post.id,
@@ -31,6 +39,18 @@ async def get_post(post_id: int, session: dp.SessionDep, response: Response):
         "attachments": list(files.scalars()),
     }
     return data
+
+
+@post.post("/create")
+async def create_post(
+    user_id: dp.FetchUserId,
+    response: Response,
+    title: Annotated[str, Form()],
+    content: Annotated[str, Form()],
+    files: List[UploadFile] | None = File(None),
+):
+    # print(f"USER_ID: {user_id}")
+    return {"message": "success"}
 
 
 @post.get("/files")
