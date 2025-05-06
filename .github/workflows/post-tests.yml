@@ -29,6 +29,7 @@ jobs:
       POSTGRES_PASSWORD: postgres
       TEST_POSTGRES_DB: post-service-test
       POST_TESTING: True
+      USER_INFO_LINK: http://localhost:8000/user/info
       PYTHONPATH: ${{ github.workspace }}/services/post:$PYTHONPATH
       JWT_SECRET_KEY: very_secret_secret
     strategy:

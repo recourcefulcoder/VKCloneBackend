@@ -39,12 +39,12 @@ NFC_STORAGE_PATH = os.getenv("NFC_STORAGE_PATH")
 
 FILE_STORAGE_DIRECTORY = (
     os.getenv("POST_DEBUG_FILE_STORAGE", default="/uploads")
-    if DEBUG
+    if DEBUG or TESTING
     else NFC_STORAGE_PATH
 )
 if FILE_STORAGE_DIRECTORY is None:
     add_message = (
-        "Maybe you forgot to define " "NFC_STORAGE_PATH environment variable?"
+        "Maybe you forgot to define NFC_STORAGE_PATH environment variable?"
     )
     logger.error(
         "Improperly configured: "

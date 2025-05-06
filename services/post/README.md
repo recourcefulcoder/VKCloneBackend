@@ -371,7 +371,7 @@ They are both loaded from environment and are declared inside a file
 |||
 | NFC_STORAGE_PATH | defines path for mounted Kubernetes PV storage (implemented in [NFC protocol](https://en.wikipedia.org/wiki/Network_File_System) |
 |||
-| USER_INFO_LINK | defines URL of user service's endpoint, which gives user information on valid auth token <br> |
+| USER_INFO_LINK | defines URL of user service's endpoint, which provides user information on valid auth token <br> |
 |||
 | POST_DEBUG | states whether an application should run in **debug mode** or not; <br/><br/> DEBUG mode assumes that all required services (redis/celery, etc.) are run on an application startup, not externally in Kubernetes cluster/ Docker Compose file |
 | POST_DEBUG_FILE_STORAGE | defines path to file storage when application is run in debug mode (related to the root directory);<br><br> defaults to "/uploads" |
